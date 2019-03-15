@@ -1,10 +1,11 @@
+#! python2
 #coding: utf-8
+''' TODO
+发送框输入时根据历史内容自动补全、提示
+'''
 ''' 升级记录
-2015.07.27  1、添加波特率记录功能
-            2、整理编码相关内容：setting.ini文件为GBK编码（Win系统下建立文件的默认编码）、
+2015.07.27  整理编码相关内容：setting.ini文件为GBK编码（Win系统下建立文件的默认编码）、
             Qt控件间为Unicode、串口发送和接收为GBK编码的字节流
-2015.07.28  1、添加closeEvent，把对setting.ini的写全部移到此函数中去
-2015.11.24  1、self.PlotBuff += text下添加if self.PlotBuff.rfind(',') == -1: return
 '''
 import os
 import sys
@@ -20,20 +21,21 @@ from serial.tools.list_ports import comports
 
 
 '''
-class SERCOM(QtGui.QWidget):
-    def __init__(self, parent=None):
-        super(SERCOM, self).__init__(parent)
-        
-        uic.loadUi('SERCOM.ui', self)
-'''
 from SERCOM_UI import Ui_SERCOM
 class SERCOM(QtGui.QWidget, Ui_SERCOM):
     def __init__(self, parent=None):
         super(SERCOM, self).__init__(parent)
         
         self.setupUi(self)
+'''
+class SERCOM(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(SERCOM, self).__init__(parent)
+        
+        uic.loadUi('SERCOM.ui', self)
 
-        for port, desc, hwid in comports(): self.cmbCOMM.addItem(port)
+        for port, desc, hwid in comports():
+            self.cmbPort.addItem('%s (%s)' %(port, desc[:desc.index('(')]))
 
         self.ser = Serial()
 
@@ -54,29 +56,33 @@ class SERCOM(QtGui.QWidget, Ui_SERCOM):
         
         self.conf = ConfigParser.ConfigParser()
         self.conf.read('setting.ini')
-        
-        if not self.conf.has_section('globals'):
-            self.conf.add_section('globals')
-            self.conf.set('globals', 'serial',   'COM0')
-            self.conf.set('globals', 'baudrate', '9600')
-            self.conf.set('globals', 'historys', '[]')
-        index = self.cmbCOMM.findText(self.conf.get('globals', 'serial'))
-        self.cmbCOMM.setCurrentIndex(index if index != -1 else 0)
-        self.cmbBaud.setCurrentIndex(self.cmbBaud.findText(self.conf.get('globals', 'baudrate')))
-        for text in eval(self.conf.get('globals', 'historys')): self.cmbSend.insertItem(10, text)
+
+        if not self.conf.has_section('serial'):
+            self.conf.add_section('serial')
+            self.conf.set('serial', 'port', 'COM0')
+            self.conf.set('serial', 'baud', '9600')
+
+            self.conf.add_section('history')
+            self.conf.set('history', 'hist1', '')
+            self.conf.set('history', 'hist2', '')
+
+        self.txtSend.setPlainText(self.conf.get('history', 'hist1'))
+
+        index = self.cmbPort.findText(self.conf.get('serial', 'port'))
+        self.cmbPort.setCurrentIndex(index if index != -1 else 0)
+        self.cmbBaud.setCurrentIndex(self.cmbBaud.findText(self.conf.get('serial', 'baud')))
     
     def initQwtPlot(self):
         self.PlotBuff = ''
         self.PlotData = [0]*1000
         
         self.qwtPlot = QwtPlot(self)
+        self.qwtPlot.setVisible(False)
         self.vLayout0.insertWidget(0, self.qwtPlot)
         
         self.PlotCurve = QwtPlotCurve()
         self.PlotCurve.attach(self.qwtPlot)
         self.PlotCurve.setData(range(1, len(self.PlotData)+1), self.PlotData)
-
-        self.on_cmbMode_currentIndexChanged(u'文本')
 
     @QtCore.pyqtSlot()
     def on_btnOpen_clicked(self):
@@ -84,7 +90,7 @@ class SERCOM(QtGui.QWidget, Ui_SERCOM):
             try:
                 self.ser.timeout = 1
                 self.ser.xonxoff = 0
-                self.ser.port = self.cmbCOMM.currentText()
+                self.ser.port = self.cmbPort.currentText().split()[0]
                 self.ser.parity = self.cmbChek.currentText()[0]
                 self.ser.baudrate = int(self.cmbBaud.currentText())
                 self.ser.bytesize = int(self.cmbData.currentText())
@@ -93,30 +99,24 @@ class SERCOM(QtGui.QWidget, Ui_SERCOM):
             except Exception as e:
                 print e
             else:                
-                self.cmbCOMM.setEnabled(False)
+                self.cmbPort.setEnabled(False)
                 self.btnOpen.setText(u'关闭串口')
-                self.lblStat.setPixmap(QtGui.QPixmap("./Image/inopening.png"))
         else:
             self.ser.close()
 
-            self.cmbCOMM.setEnabled(True)
+            self.cmbPort.setEnabled(True)
             self.btnOpen.setText(u'打开串口')
-            self.lblStat.setPixmap(QtGui.QPixmap("./Image/inclosing.png"))
     
     @QtCore.pyqtSlot()
     def on_btnSend_clicked(self):
         if self.ser.is_open:
-            text = self.cmbSend.currentText()
+            text = self.txtSend.toPlainText()
             if self.chkHEXSend.isChecked():
                 bytes = ' '.join([chr(int(x,16)) for x in text.split()])
             else:
-                bytes = text.encode('gbk') + ('\n' if self.chkSendLF.isChecked() else '')
+                bytes = text.replace('\n', '\r\n').encode('gbk')
             
             self.ser.write(bytes)
-
-            if self.cmbSend.itemText(0) != text:
-                self.cmbSend.insertItem(0, text)
-                self.cmbSend.setCurrentIndex(0)
     
     def on_tmrSer_timeout(self):        
         if self.ser.is_open:
@@ -124,7 +124,7 @@ class SERCOM(QtGui.QWidget, Ui_SERCOM):
             if num > 0:
                 bytes = self.ser.read(num)
                 
-                if self.mode == u'文本':
+                if self.chkWavShow.checkState() == QtCore.Qt.Unchecked:
                     if self.chkHEXShow.isChecked():
                         text = ' '.join('%02X' %ord(c) for c in bytes) + ' '
                     else:
@@ -168,11 +168,10 @@ class SERCOM(QtGui.QWidget, Ui_SERCOM):
                     self.PlotCurve.setData(range(1, len(self.PlotData)+1), self.PlotData)
                     self.qwtPlot.replot()
     
-    @QtCore.pyqtSlot(str)
-    def on_cmbMode_currentIndexChanged(self, text):
-        self.mode = text
-        self.txtMain.setVisible(self.mode == u'文本')
-        self.qwtPlot.setVisible(self.mode == u'波形')
+    @QtCore.pyqtSlot(int)
+    def on_chkWavShow_stateChanged(self, state):
+        self.qwtPlot.setVisible(state == QtCore.Qt.Checked)
+        self.txtMain.setVisible(state == QtCore.Qt.Unchecked)
     
     @QtCore.pyqtSlot(str)
     def on_cmbBaud_currentIndexChanged(self, text):
@@ -197,14 +196,9 @@ class SERCOM(QtGui.QWidget, Ui_SERCOM):
     def closeEvent(self, evt):
         self.ser.close()
 
-        self.conf.set('globals', 'serial',   self.cmbCOMM.currentText())
-        self.conf.set('globals', 'baudrate', self.cmbBaud.currentText())
-
-        histerys = []
-        for i in range(min(10, self.cmbSend.count())):
-            histerys.append(self.cmbSend.itemText(i))
-        self.conf.set('globals', 'historys', repr(histerys))
-
+        self.conf.set('serial', 'port', self.cmbPort.currentText())
+        self.conf.set('serial', 'baud', self.cmbBaud.currentText())
+        self.conf.set('history', 'hist1', self.txtSend.toPlainText())
         self.conf.write(open('setting.ini', 'w'))
 
 
