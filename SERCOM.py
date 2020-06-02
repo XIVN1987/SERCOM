@@ -11,6 +11,8 @@ from PyQt5.QtChart import QChart, QChartView, QLineSeries
 from serial import Serial
 from serial.tools.list_ports import comports
 
+N_CURVES = 4
+
 
 '''
 from SERCOM_UI import Ui_SERCOM
@@ -35,12 +37,14 @@ class SERCOM(QWidget):
 
         self.initQwtPlot()
 
-        self.buffer = b''    #串口接收缓存
+        self.rcvbuff = b''
 
         self.tmrSer = QtCore.QTimer()
         self.tmrSer.setInterval(10)
         self.tmrSer.timeout.connect(self.on_tmrSer_timeout)
         self.tmrSer.start()
+
+        self.tmrSer_Cnt = 0
     
     def initSetting(self):
         if not os.path.exists('setting.ini'):
@@ -65,21 +69,16 @@ class SERCOM(QWidget):
         self.cmbBaud.setCurrentIndex(self.cmbBaud.findText(self.conf.get('serial', 'baud')))
     
     def initQwtPlot(self):
-        self.PlotData = [0]*1000
+        self.PlotData  = [[0]*1000 for i in range(N_CURVES)]
+        self.PlotPoint = [[QtCore.QPointF(j, 0) for j in range(1000)] for i in range(N_CURVES)]
 
         self.PlotChart = QChart()
-        self.PlotChart.legend().hide()
 
         self.ChartView = QChartView(self.PlotChart)
         self.ChartView.setVisible(False)
         self.vLayout0.insertWidget(0, self.ChartView)
         
-        self.PlotCurve = QLineSeries()
-        self.PlotCurve.setColor(Qt.red)
-        self.PlotChart.addSeries(self.PlotCurve)
-
-        self.PlotChart.createDefaultAxes()
-        self.PlotChart.axisX().setLabelFormat('%d')
+        self.PlotCurve = [QLineSeries() for i in range(N_CURVES)]
 
     @pyqtSlot()
     def on_btnOpen_clicked(self):
@@ -123,51 +122,75 @@ class SERCOM(QWidget):
         if self.ser.is_open:
             num = self.ser.in_waiting
             if num > 0:
-                self.buffer += self.ser.read(num)
+                self.rcvbuff += self.ser.read(num)
                 
                 if self.chkWavShow.checkState() == Qt.Unchecked:
                     if self.chkHEXShow.isChecked():
-                        text = ' '.join(f'{x:02X}' for x in self.buffer) + ' '
-                        self.buffer = b''
+                        text = ' '.join(f'{x:02X}' for x in self.rcvbuff) + ' '
+                        self.rcvbuff = b''
+                    
                     else:
                         text = ''
-                        while len(self.buffer) > 1:
-                            if self.buffer[0] < 0x7F:
-                                text += chr(self.buffer[0])
-                                self.buffer = self.buffer[1:]
+                        while len(self.rcvbuff) > 1:
+                            if self.rcvbuff[0] < 0x7F:
+                                text += chr(self.rcvbuff[0])
+                                self.rcvbuff = self.rcvbuff[1:]
+                            
                             else:
                                 try:
-                                    hanzi = self.buffer[:2].decode('gbk')
+                                    hanzi = self.rcvbuff[:2].decode('gbk')
                                 except Exception as e:
-                                    text += f'\\x{self.buffer[0]:02X}'
-                                    self.buffer = self.buffer[1:]
+                                    text += f'\\x{self.rcvbuff[0]:02X}'
+                                    self.rcvbuff = self.rcvbuff[1:]
                                 else:
                                     text += hanzi
-                                    self.buffer = self.buffer[2:]
+                                    self.rcvbuff = self.rcvbuff[2:]
                     
                     if len(self.txtMain.toPlainText()) > 25000: self.txtMain.clear()
                     self.txtMain.moveCursor(QtGui.QTextCursor.End)
                     self.txtMain.insertPlainText(text)
                 
                 else:
-                    if self.buffer.rfind(b',') == -1: return
+                    if self.rcvbuff.rfind(b',') == -1: return
 
                     try:
-                        d = [int(x) for x in self.buffer[0:self.buffer.rfind(b',')].split(b',')]
-                        for x in d:
-                            self.PlotData.pop(0)
-                            self.PlotData.append(x)
+                        d = self.rcvbuff[0:self.rcvbuff.rfind(b',')].split(b',')    # [b'12', b'34'] or [b'12 34', b'56 78']
+                        d = [[float(x) for x in X.strip().split()] for X in d]      # [[12], [34]]   or [[12, 34], [56, 78]]
+                        for arr in d:
+                            for i, x in enumerate(arr):
+                                if i == N_CURVES: break
+
+                                self.PlotData[i].pop(0)
+                                self.PlotData[i].append(x)
+                                self.PlotPoint[i].pop(0)
+                                self.PlotPoint[i].append(QtCore.QPointF(999, x))
+                        
+                        self.rcvbuff = self.rcvbuff[self.rcvbuff.rfind(b',')+1:]
+
+                        self.tmrSer_Cnt += 1
+                        if self.tmrSer_Cnt % 4 == 0:
+                            if len(d[-1]) != len(self.PlotChart.series()):
+                                for series in self.PlotChart.series():
+                                    self.PlotChart.removeSeries(series)
+                                for i in range(min(len(d[-1]), N_CURVES)):
+                                    self.PlotCurve[i].setName(f'Curve {i+1}')
+                                    self.PlotChart.addSeries(self.PlotCurve[i])
+                                self.PlotChart.createDefaultAxes()
+
+                            for i in range(len(self.PlotChart.series())):
+                                for j, point in enumerate(self.PlotPoint[i]):
+                                    point.setX(j)
+                            
+                                self.PlotCurve[i].replace(self.PlotPoint[i])
+                        
+                            miny = min([min(d) for d in self.PlotData])
+                            maxy = max([max(d) for d in self.PlotData])
+                            self.PlotChart.axisY().setRange(miny, maxy)
+                            self.PlotChart.axisX().setRange(0000, 1000)
+                    
                     except Exception as e:
-                        self.buffer = b''
-                        print(str(e))
-                    else:
-                        self.buffer = self.buffer[self.buffer.rfind(b',')+1:]
-                    
-                    points = [QtCore.QPoint(i, v) for i, v in enumerate(self.PlotData)]
-                    
-                    self.PlotCurve.replace(points)
-                    self.PlotChart.axisX().setMax(len(self.PlotData))
-                    self.PlotChart.axisY().setRange(min(self.PlotData), max(self.PlotData))
+                        self.rcvbuff = b''
+                        print(e)
     
     @pyqtSlot(int)
     def on_chkWavShow_stateChanged(self, state):
