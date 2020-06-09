@@ -183,8 +183,8 @@ class SERCOM(QWidget):
                             
                                 self.PlotCurve[i].replace(self.PlotPoint[i])
                         
-                            miny = min([min(d) for d in self.PlotData])
-                            maxy = max([max(d) for d in self.PlotData])
+                            miny = min([min(d) for d in self.PlotData[:len(self.PlotChart.series())]])
+                            maxy = max([max(d) for d in self.PlotData[:len(self.PlotChart.series())]])
                             self.PlotChart.axisY().setRange(miny, maxy)
                             self.PlotChart.axisX().setRange(0000, 1000)
                     
