@@ -200,6 +200,9 @@
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Preferred</enum>
+       </property>
        <property name="sizeHint" stdset="0">
         <size>
          <width>40</width>
@@ -209,15 +212,21 @@
       </spacer>
      </item>
      <item>
-      <widget class="QCheckBox" name="chkHEXShow">
+      <widget class="QCheckBox" name="chkWave">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
-        <string>HEX 显示</string>
+        <string>波形显示</string>
        </property>
       </widget>
      </item>
@@ -407,6 +416,9 @@
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Preferred</enum>
+       </property>
        <property name="sizeHint" stdset="0">
         <size>
          <width>40</width>
@@ -416,10 +428,45 @@
       </spacer>
      </item>
      <item>
-      <widget class="QCheckBox" name="chkWavShow">
-       <property name="text">
-        <string>波形显示</string>
+      <widget class="QComboBox" name="cmbICode">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>接收内容编码</string>
+       </property>
+       <property name="toolTipDuration">
+        <number>1000</number>
+       </property>
+       <item>
+        <property name="text">
+         <string>ASCII</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>HEX</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>GBK</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>UTF-8</string>
+        </property>
+       </item>
       </widget>
      </item>
     </layout>
@@ -437,18 +484,8 @@
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item row="1" column="3">
-      <spacer name="hSpacer32">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+       <property name="sizeType">
+        <enum>QSizePolicy::Preferred</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -459,36 +496,67 @@
       </spacer>
      </item>
      <item row="0" column="4">
-      <widget class="QCheckBox" name="chkHEXSend">
+      <widget class="QComboBox" name="cmbOCode">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
-       <property name="text">
-        <string>HEX 发送</string>
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>0</height>
+        </size>
        </property>
+       <property name="toolTip">
+        <string>发送内容编码</string>
+       </property>
+       <property name="toolTipDuration">
+        <number>1000</number>
+       </property>
+       <item>
+        <property name="text">
+         <string>ASCII</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>HEX</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>GBK</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>UTF-8</string>
+        </property>
+       </item>
       </widget>
      </item>
-     <item row="1" column="4">
-      <widget class="QCheckBox" name="chkTimSend">
-       <property name="text">
-        <string>定时发送</string>
+     <item row="1" column="3">
+      <spacer name="hSpacer32">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
        </property>
-      </widget>
-     </item>
-     <item row="2" column="4">
-      <widget class="QCheckBox" name="chkExtTran">
-       <property name="text">
-        <string>收发扩展</string>
+       <property name="sizeType">
+        <enum>QSizePolicy::Preferred</enum>
        </property>
-      </widget>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
      </item>
      <item row="0" column="0" rowspan="3">
       <widget class="QTextEdit" name="txtSend">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
@@ -518,6 +586,125 @@
        <property name="text">
         <string>发送</string>
        </property>
+      </widget>
+     </item>
+     <item row="2" column="4">
+      <widget class="QComboBox" name="cmbAuto">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>定时自动发送</string>
+       </property>
+       <property name="toolTipDuration">
+        <number>1000</number>
+       </property>
+       <item>
+        <property name="text">
+         <string>NO Auto</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>0.1s</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>0.2s</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>0.5s</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>1s</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>2s</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>5s</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>10s</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>20s</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>30s</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>1m</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>2m</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>5m</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="4">
+      <widget class="QComboBox" name="cmbEnter">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>发送换行编码</string>
+       </property>
+       <property name="toolTipDuration">
+        <number>1000</number>
+       </property>
+       <item>
+        <property name="text">
+         <string>\r\n</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>\n</string>
+        </property>
+       </item>
       </widget>
      </item>
     </layout>

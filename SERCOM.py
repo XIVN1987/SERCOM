@@ -45,6 +45,7 @@ class SERCOM(QWidget):
         self.tmrSer.start()
 
         self.tmrSer_Cnt = 0
+        self.AutoInterval = 0   # 自动发送时间间隔，单位 10ms
     
     def initSetting(self):
         if not os.path.exists('setting.ini'):
@@ -56,13 +57,21 @@ class SERCOM(QWidget):
         if not self.conf.has_section('serial'):
             self.conf.add_section('serial')
             self.conf.set('serial', 'port', 'COM0')
-            self.conf.set('serial', 'baud', '9600')
+            self.conf.set('serial', 'baud', '57600')
 
-            self.conf.add_section('history')
-            self.conf.set('history', 'hist1', '')
-            self.conf.set('history', 'hist2', '')
+            self.conf.add_section('encode')
+            self.conf.set('encode', 'input', 'ASCII')
+            self.conf.set('encode', 'output', 'ASCII')
+            self.conf.set('encode', 'oenter', r'\r\n')  # output enter (line feed)
 
-        self.txtSend.setPlainText(self.conf.get('history', 'hist1'))
+            self.conf.add_section('others')
+            self.conf.set('others', 'history', '11 22 33 AA BB CC')
+
+        self.txtSend.setPlainText(self.conf.get('others', 'history'))
+
+        self.cmbICode.setCurrentIndex(self.cmbICode.findText(self.conf.get('encode', 'input')))
+        self.cmbOCode.setCurrentIndex(self.cmbOCode.findText(self.conf.get('encode', 'output')))
+        self.cmbEnter.setCurrentIndex(self.cmbEnter.findText(self.conf.get('encode', 'oenter')))
 
         index = self.cmbPort.findText(self.conf.get('serial', 'port'))
         self.cmbPort.setCurrentIndex(index if index != -1 else 0)
@@ -108,50 +117,32 @@ class SERCOM(QWidget):
     def on_btnSend_clicked(self):
         if self.ser.is_open:
             text = self.txtSend.toPlainText()
-            if self.chkHEXSend.isChecked():
+
+            if self.cmbOCode.currentText() == 'HEX':
                 try:
-                    text = ' '.join([chr(int(x,16)) for x in text.split()])
+                    self.ser.write(bytes([int(x, 16) for x in text.split()]))
                 except Exception as e:
                     print(e)
+
             else:
-                text = text.replace('\n', '\r\n')
-            
-            self.ser.write(text.encode('latin'))
+                if self.cmbEnter.currentText() == r'\r\n':
+                    text = text.replace('\n', '\r\n')
+                
+                try:
+                    self.ser.write(text.encode(self.cmbOCode.currentText()))
+                except Exception as e:
+                    print(e)
     
-    def on_tmrSer_timeout(self):        
+    def on_tmrSer_timeout(self):
+        self.tmrSer_Cnt += 1
+
         if self.ser.is_open:
-            num = self.ser.in_waiting
-            if num > 0:
-                self.rcvbuff += self.ser.read(num)
+            if self.ser.in_waiting > 0:
+                self.rcvbuff += self.ser.read(self.ser.in_waiting)
                 
-                if self.chkWavShow.checkState() == Qt.Unchecked:
-                    if self.chkHEXShow.isChecked():
-                        text = ' '.join(f'{x:02X}' for x in self.rcvbuff) + ' '
-                        self.rcvbuff = b''
-                    
-                    else:
-                        text = ''
-                        while len(self.rcvbuff) > 1:
-                            if self.rcvbuff[0] < 0x7F:
-                                text += chr(self.rcvbuff[0])
-                                self.rcvbuff = self.rcvbuff[1:]
-                            
-                            else:
-                                try:
-                                    hanzi = self.rcvbuff[:2].decode('gbk')
-                                except Exception as e:
-                                    text += f'\\x{self.rcvbuff[0]:02X}'
-                                    self.rcvbuff = self.rcvbuff[1:]
-                                else:
-                                    text += hanzi
-                                    self.rcvbuff = self.rcvbuff[2:]
-                    
-                    if len(self.txtMain.toPlainText()) > 25000: self.txtMain.clear()
-                    self.txtMain.moveCursor(QtGui.QTextCursor.End)
-                    self.txtMain.insertPlainText(text)
-                
-                else:
-                    if self.rcvbuff.rfind(b',') == -1: return
+                if self.chkWave.isChecked():
+                    if self.rcvbuff.rfind(b',') == -1:
+                        return
 
                     try:
                         d = self.rcvbuff[0:self.rcvbuff.rfind(b',')].split(b',')    # [b'12', b'34'] or [b'12 34', b'56 78']
@@ -167,7 +158,6 @@ class SERCOM(QWidget):
                         
                         self.rcvbuff = self.rcvbuff[self.rcvbuff.rfind(b',')+1:]
 
-                        self.tmrSer_Cnt += 1
                         if self.tmrSer_Cnt % 4 == 0:
                             if len(d[-1]) != len(self.PlotChart.series()):
                                 for series in self.PlotChart.series():
@@ -191,9 +181,86 @@ class SERCOM(QWidget):
                     except Exception as e:
                         self.rcvbuff = b''
                         print(e)
+
+                else:
+                    text = ''
+                    if self.cmbICode.currentText() == 'ASCII':
+                        text = ''.join([chr(x) for x in self.rcvbuff])
+                        self.rcvbuff = b''
+
+                    elif self.cmbICode.currentText() == 'HEX':
+                        text = ' '.join([f'{x:02X}' for x in self.rcvbuff]) + ' '
+                        self.rcvbuff = b''
+
+                    elif self.cmbICode.currentText() == 'GBK':
+                        while len(self.rcvbuff):
+                            if self.rcvbuff[0:1].decode('GBK', 'ignore'):
+                                text += self.rcvbuff[0:1].decode('GBK')
+                                self.rcvbuff = self.rcvbuff[1:]
+
+                            elif len(self.rcvbuff) > 1 and self.rcvbuff[0:2].decode('GBK', 'ignore'):
+                                text += self.rcvbuff[0:2].decode('GBK')
+                                self.rcvbuff = self.rcvbuff[2:]
+
+                            elif len(self.rcvbuff) > 1:
+                                text += chr(self.rcvbuff[0])
+                                self.rcvbuff = self.rcvbuff[1:]
+
+                            else:
+                                break
+
+                    elif self.cmbICode.currentText() == 'UTF-8':
+                        while len(self.rcvbuff):
+                            if self.rcvbuff[0:1].decode('UTF-8', 'ignore'):
+                                text += self.rcvbuff[0:1].decode('UTF-8')
+                                self.rcvbuff = self.rcvbuff[1:]
+
+                            elif len(self.rcvbuff) > 1 and self.rcvbuff[0:2].decode('UTF-8', 'ignore'):
+                                text += self.rcvbuff[0:2].decode('UTF-8')
+                                self.rcvbuff = self.rcvbuff[2:]
+
+                            elif len(self.rcvbuff) > 2 and self.rcvbuff[0:3].decode('UTF-8', 'ignore'):
+                                text += self.rcvbuff[0:3].decode('UTF-8')
+                                self.rcvbuff = self.rcvbuff[3:]
+
+                            elif len(self.rcvbuff) > 3 and self.rcvbuff[0:4].decode('UTF-8', 'ignore'):
+                                text += self.rcvbuff[0:4].decode('UTF-8')
+                                self.rcvbuff = self.rcvbuff[4:]
+
+                            elif len(self.rcvbuff) > 3:
+                                text += chr(self.rcvbuff[0])
+                                self.rcvbuff = self.rcvbuff[1:]
+
+                            else:
+                                break
+                    
+                    if len(self.txtMain.toPlainText()) > 25000: self.txtMain.clear()
+                    self.txtMain.moveCursor(QtGui.QTextCursor.End)
+                    self.txtMain.insertPlainText(text)
+
+            if self.AutoInterval and self.tmrSer_Cnt % self.AutoInterval == 0:
+                self.on_btnSend_clicked()
+
+        else:
+            if self.tmrSer_Cnt % 100 == 0:
+                if len(comports()) != self.cmbPort.count():
+                    self.cmbPort.clear()
+                    for port, desc, hwid in comports():
+                        self.cmbPort.addItem(f'{port} ({desc[:desc.index("(")]})')
+
+    @pyqtSlot(str)
+    def on_cmbAuto_currentIndexChanged(self, text):
+        if self.cmbAuto.currentText() == 'NO Auto':
+            self.AutoInterval = 0
+
+        elif self.cmbAuto.currentText().endswith('s'):
+            self.AutoInterval = float(self.cmbAuto.currentText()[:-1]) * 100
+
+        elif self.cmbAuto.currentText().endswith('m'):
+            self.AutoInterval = float(self.cmbAuto.currentText()[:-1]) * 100 * 60
     
     @pyqtSlot(int)
-    def on_chkWavShow_stateChanged(self, state):
+    def on_chkWave_stateChanged(self, state):
         self.ChartView.setVisible(state == Qt.Checked)
         self.txtMain.setVisible(state == Qt.Unchecked)
     
@@ -222,7 +289,10 @@ class SERCOM(QWidget):
 
         self.conf.set('serial', 'port', self.cmbPort.currentText())
         self.conf.set('serial', 'baud', self.cmbBaud.currentText())
-        self.conf.set('history', 'hist1', self.txtSend.toPlainText())
+        self.conf.set('encode', 'input', self.cmbICode.currentText())
+        self.conf.set('encode', 'output', self.cmbOCode.currentText())
+        self.conf.set('encode', 'oenter', self.cmbEnter.currentText())
+        self.conf.set('others', 'history', self.txtSend.toPlainText())
         self.conf.write(open('setting.ini', 'w', encoding='utf-8'))
 
 
