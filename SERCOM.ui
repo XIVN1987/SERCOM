@@ -18,7 +18,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>XIVN1987 串口助手</string>
+   <string>串口助手</string>
   </property>
   <property name="windowIcon">
    <iconset>
@@ -444,7 +444,7 @@
        <property name="toolTip">
         <string>接收内容编码</string>
        </property>
-       <property name="toolTipDuration">
+       <property name="toolTipDuration" stdset="0">
         <number>1000</number>
        </property>
        <item>
@@ -512,7 +512,7 @@
        <property name="toolTip">
         <string>发送内容编码</string>
        </property>
-       <property name="toolTipDuration">
+       <property name="toolTipDuration" stdset="0">
         <number>1000</number>
        </property>
        <item>
@@ -605,7 +605,7 @@
        <property name="toolTip">
         <string>定时自动发送</string>
        </property>
-       <property name="toolTipDuration">
+       <property name="toolTipDuration" stdset="0">
         <number>1000</number>
        </property>
        <item>
@@ -692,7 +692,7 @@
        <property name="toolTip">
         <string>发送换行编码</string>
        </property>
-       <property name="toolTipDuration">
+       <property name="toolTipDuration" stdset="0">
         <number>1000</number>
        </property>
        <item>
