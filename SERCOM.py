@@ -11,8 +11,6 @@ from PyQt5.QtChart import QChart, QChartView, QLineSeries
 from serial import Serial
 from serial.tools.list_ports import comports
 
-N_CURVES = 4
-
 
 '''
 from SERCOM_UI import Ui_SERCOM
@@ -64,10 +62,17 @@ class SERCOM(QWidget):
             self.conf.set('encode', 'output', 'ASCII')
             self.conf.set('encode', 'oenter', r'\r\n')  # output enter (line feed)
 
-            self.conf.add_section('others')
-            self.conf.set('others', 'history', '11 22 33 AA BB CC')
+            self.conf.add_section('display')
+            self.conf.set('display', 'ncurve', '4')
+            self.conf.set('display', 'npoint', '1000')
 
-        self.txtSend.setPlainText(self.conf.get('others', 'history'))
+            self.conf.add_section('history')
+            self.conf.set('history', 'hist1', '11 22 33 AA BB CC')
+
+        self.txtSend.setPlainText(self.conf.get('history', 'hist1'))
+
+        self.N_CURVE = int(self.conf.get('display', 'ncurve'), 10)
+        self.N_POINT = int(self.conf.get('display', 'npoint'), 10)
 
         self.cmbICode.setCurrentIndex(self.cmbICode.findText(self.conf.get('encode', 'input')))
         self.cmbOCode.setCurrentIndex(self.cmbOCode.findText(self.conf.get('encode', 'output')))
@@ -78,8 +83,8 @@ class SERCOM(QWidget):
         self.cmbBaud.setCurrentIndex(self.cmbBaud.findText(self.conf.get('serial', 'baud')))
     
     def initQwtPlot(self):
-        self.PlotData  = [[0]*1000 for i in range(N_CURVES)]
-        self.PlotPoint = [[QtCore.QPointF(j, 0) for j in range(1000)] for i in range(N_CURVES)]
+        self.PlotData  = [[0]*self.N_POINT for i in range(self.N_CURVE)]
+        self.PlotPoint = [[QtCore.QPointF(j, 0) for j in range(self.N_POINT)] for i in range(self.N_CURVE)]
 
         self.PlotChart = QChart()
 
@@ -87,7 +92,7 @@ class SERCOM(QWidget):
         self.ChartView.setVisible(False)
         self.vLayout0.insertWidget(0, self.ChartView)
         
-        self.PlotCurve = [QLineSeries() for i in range(N_CURVES)]
+        self.PlotCurve = [QLineSeries() for i in range(self.N_CURVE)]
 
     @pyqtSlot()
     def on_btnOpen_clicked(self):
@@ -149,7 +154,7 @@ class SERCOM(QWidget):
                         d = [[float(x) for x in X.strip().split()] for X in d]      # [[12], [34]]   or [[12, 34], [56, 78]]
                         for arr in d:
                             for i, x in enumerate(arr):
-                                if i == N_CURVES: break
+                                if i == self.N_CURVE: break
 
                                 self.PlotData[i].pop(0)
                                 self.PlotData[i].append(x)
@@ -162,7 +167,7 @@ class SERCOM(QWidget):
                             if len(d[-1]) != len(self.PlotChart.series()):
                                 for series in self.PlotChart.series():
                                     self.PlotChart.removeSeries(series)
-                                for i in range(min(len(d[-1]), N_CURVES)):
+                                for i in range(min(len(d[-1]), self.N_CURVE)):
                                     self.PlotCurve[i].setName(f'Curve {i+1}')
                                     self.PlotChart.addSeries(self.PlotCurve[i])
                                 self.PlotChart.createDefaultAxes()
@@ -172,11 +177,11 @@ class SERCOM(QWidget):
                                     point.setX(j)
                             
                                 self.PlotCurve[i].replace(self.PlotPoint[i])
-                        
+                            
                             miny = min([min(d) for d in self.PlotData[:len(self.PlotChart.series())]])
                             maxy = max([max(d) for d in self.PlotData[:len(self.PlotChart.series())]])
                             self.PlotChart.axisY().setRange(miny, maxy)
-                            self.PlotChart.axisX().setRange(0000, 1000)
+                            self.PlotChart.axisX().setRange(0000, self.N_POINT)
                     
                     except Exception as e:
                         self.rcvbuff = b''
@@ -292,7 +297,7 @@ class SERCOM(QWidget):
         self.conf.set('encode', 'input', self.cmbICode.currentText())
         self.conf.set('encode', 'output', self.cmbOCode.currentText())
         self.conf.set('encode', 'oenter', self.cmbEnter.currentText())
-        self.conf.set('others', 'history', self.txtSend.toPlainText())
+        self.conf.set('history', 'hist1', self.txtSend.toPlainText())
         self.conf.write(open('setting.ini', 'w', encoding='utf-8'))
 
 
