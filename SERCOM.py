@@ -1,6 +1,7 @@
 #! python3
 import os
 import sys
+import datetime
 import configparser
 
 from PyQt5 import QtCore, QtGui, uic
@@ -36,6 +37,7 @@ class SERCOM(QWidget):
         self.initQwtPlot()
 
         self.rcvbuff = b''
+        self.rcvfile = None
 
         self.tmrSer = QtCore.QTimer()
         self.tmrSer.setInterval(10)
@@ -106,6 +108,9 @@ class SERCOM(QWidget):
                 self.ser.bytesize = int(self.cmbData.currentText())
                 self.ser.stopbits = int(self.cmbStop.currentText())
                 self.ser.open()
+
+                if self.chkSave.isChecked():
+                    self.rcvfile = open(datetime.datetime.now().strftime("rcv_%y%m%d%H%M%S.txt"), 'w')
             except Exception as e:
                 self.txtMain.clear()
                 self.txtMain.insertPlainText(str(e))
@@ -113,8 +118,11 @@ class SERCOM(QWidget):
                 self.cmbPort.setEnabled(False)
                 self.btnOpen.setText('关闭串口')
         else:
+            if self.rcvfile and not self.rcvfile.closed:
+                self.rcvfile.close()
+            
             self.ser.close()
-
+            
             self.cmbPort.setEnabled(True)
             self.btnOpen.setText('打开串口')
     
@@ -143,7 +151,12 @@ class SERCOM(QWidget):
 
         if self.ser.is_open:
             if self.ser.in_waiting > 0:
-                self.rcvbuff += self.ser.read(self.ser.in_waiting)
+                rcvdbytes = self.ser.read(self.ser.in_waiting)
+
+                if self.rcvfile and not self.rcvfile.closed:
+                    self.rcvfile.write(rcvdbytes.decode('latin-1'))
+                
+                self.rcvbuff += rcvdbytes
                 
                 if self.chkWave.isChecked():
                     if self.rcvbuff.rfind(b',') == -1:
@@ -290,6 +303,9 @@ class SERCOM(QWidget):
         self.txtMain.clear()
     
     def closeEvent(self, evt):
+        if self.rcvfile and not self.rcvfile.closed:
+            self.rcvfile.close()
+
         self.ser.close()
 
         self.conf.set('serial', 'port', self.cmbPort.currentText())
