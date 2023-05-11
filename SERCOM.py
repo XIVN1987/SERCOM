@@ -133,7 +133,7 @@ class SERCOM(QWidget):
 
             if self.cmbOCode.currentText() == 'HEX':
                 try:
-                    self.ser.write(bytes([int(x, 16) for x in text.split()]))
+                    self.ser.write(bytes([int(x, 16) for x in text.split()]))   # for example, text = '55 AA 5A'
                 except Exception as e:
                     print(e)
 
@@ -163,8 +163,11 @@ class SERCOM(QWidget):
                         return
 
                     try:
-                        d = self.rcvbuff[0:self.rcvbuff.rfind(b',')].split(b',')    # [b'12', b'34'] or [b'12 34', b'56 78']
-                        d = [[float(x) for x in X.strip().split()] for X in d]      # [[12], [34]]   or [[12, 34], [56, 78]]
+                        d = self.rcvbuff[0:self.rcvbuff.rfind(b',')].split(b',')        # [b'12', b'34'] or [b'12 34', b'56 78']
+                        if self.cmbICode.currentText() != 'HEX':
+                            d = [[float(x)   for x in X.strip().split()] for X in d]    # [[12], [34]]   or [[12, 34], [56, 78]]
+                        else:
+                            d = [[int(x, 16) for x in X.strip().split()] for X in d]    # for example, d = [b'12', b'AA', b'5A5A']
                         for arr in d:
                             for i, x in enumerate(arr):
                                 if i == self.N_CURVE: break
