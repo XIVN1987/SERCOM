@@ -68,10 +68,13 @@ class SERCOM(QWidget):
             self.conf.set('display', 'ncurve', '4')
             self.conf.set('display', 'npoint', '1000')
 
-            self.conf.add_section('history')
-            self.conf.set('history', 'hist1', '11 22 33 AA BB CC')
+            self.conf.add_section('others')
+            self.conf.set('others', 'savedir', '.')
+            self.conf.set('others', 'history', '11 22 33 AA BB CC')
 
-        self.txtSend.setPlainText(self.conf.get('history', 'hist1'))
+        self.txtSend.setPlainText(self.conf.get('others', 'history'))
+
+        self.savedir = self.conf.get('others', 'savedir')
 
         self.N_CURVE = int(self.conf.get('display', 'ncurve'), 10)
         self.N_POINT = int(self.conf.get('display', 'npoint'), 10)
@@ -110,7 +113,7 @@ class SERCOM(QWidget):
                 self.ser.open()
 
                 if self.chkSave.isChecked():
-                    self.rcvfile = open(datetime.datetime.now().strftime("rcv_%y%m%d%H%M%S.txt"), 'w')
+                    self.rcvfile = open(os.path.join(self.savedir, datetime.datetime.now().strftime("rcv_%y%m%d%H%M%S.txt")), 'w')
             except Exception as e:
                 self.txtMain.clear()
                 self.txtMain.insertPlainText(str(e))
@@ -316,7 +319,7 @@ class SERCOM(QWidget):
         self.conf.set('encode', 'input', self.cmbICode.currentText())
         self.conf.set('encode', 'output', self.cmbOCode.currentText())
         self.conf.set('encode', 'oenter', self.cmbEnter.currentText())
-        self.conf.set('history', 'hist1', self.txtSend.toPlainText())
+        self.conf.set('others', 'history', self.txtSend.toPlainText())
         self.conf.write(open('setting.ini', 'w', encoding='utf-8'))
 
 
