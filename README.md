@@ -4,7 +4,7 @@ serial assistant written in python
 to run this software, you need python 3.6, pyqt5, pyqtchart and pyserial
 
 波形显示  
-![](https://github.com/XIVN1987/SERCOM/blob/master/波形.jpg)
+![](./波形.jpg)
 
 data format for wave show:
 + 1 wave: 11, 22, 33,
