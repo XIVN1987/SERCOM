@@ -141,8 +141,7 @@ class SERCOM(QWidget):
                     print(e)
 
             else:
-                if self.cmbEnter.currentText() == r'\r\n':
-                    text = text.replace('\n', '\r\n')
+                text = text.replace('\n', self.cmbEnter.currentText().replace(r'\r', '\r').replace(r'\n', '\n'))
                 
                 try:
                     self.ser.write(text.encode(self.cmbOCode.currentText()))

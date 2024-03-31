@@ -528,7 +528,7 @@
        <property name="toolTip">
         <string>发送内容编码</string>
        </property>
-       <property name="toolTipDuration" stdset="0">
+       <property name="toolTipDuration">
         <number>1000</number>
        </property>
        <item>
@@ -570,7 +570,7 @@
        <property name="toolTip">
         <string>定时自动发送</string>
        </property>
-       <property name="toolTipDuration" stdset="0">
+       <property name="toolTipDuration">
         <number>1000</number>
        </property>
        <item>
@@ -657,7 +657,7 @@
        <property name="toolTip">
         <string>发送换行编码</string>
        </property>
-       <property name="toolTipDuration" stdset="0">
+       <property name="toolTipDuration">
         <number>1000</number>
        </property>
        <item>
@@ -668,6 +668,11 @@
        <item>
         <property name="text">
          <string>\n</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>\r</string>
         </property>
        </item>
       </widget>
@@ -689,7 +694,7 @@
        <property name="toolTip">
         <string>接收内容编码</string>
        </property>
-       <property name="toolTipDuration" stdset="0">
+       <property name="toolTipDuration">
         <number>1000</number>
        </property>
        <item>
