@@ -242,10 +242,13 @@ class SERCOM(QWidget):
     def on_tmrRecv_timeout(self):
         port = self.cmbPort.currentText()
         if not self.closed:
-            if port in ('UDP Server', 'UDP Client'):
-                rcvdbytes = b'' if self.rcvQueue.empty() else self.rcvQueue.get()
-            else:
-                rcvdbytes = self.ser.read(self.ser.in_waiting)
+            try:
+                if port in ('UDP Server', 'UDP Client'):
+                    rcvdbytes = self.rcvQueue.get(block=False)
+                else:
+                    rcvdbytes = self.ser.read(self.ser.in_waiting)
+            except Exception as e:
+                rcvdbytes = b''
 
             if rcvdbytes:
                 if self.rcvfile and not self.rcvfile.closed:
