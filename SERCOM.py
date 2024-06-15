@@ -1,13 +1,13 @@
 #! python3
 import os
 import sys
+import time
 import queue
 import socket
 import datetime
 import threading
 import collections
 import configparser
-import time
 
 from PyQt5 import QtCore, QtGui, uic
 from PyQt5.QtCore import pyqtSlot, Qt
@@ -429,6 +429,8 @@ class SERCOM(QWidget):
 
         elif text.endswith('m'):
             self.AutoInterval = float(text[:-1]) * 100 * 60
+
+        self.AutoInterval = int(self.AutoInterval)
 
     @pyqtSlot()
     def on_btnClear_clicked(self):
