@@ -58,6 +58,7 @@ class SERCOM(QWidget):
         self.tmrRecv.start()
 
         self.tmrRecv_Cnt = 0
+        self.tmrRecv_Sav = 0
         self.AutoInterval = 0   # 自动发送时间间隔，单位 10ms
     
     def initSetting(self):
@@ -277,7 +278,8 @@ class SERCOM(QWidget):
                         
                         self.rcvbuff = self.rcvbuff[self.rcvbuff.rfind(b',')+1:]
 
-                        if self.tmrRecv_Cnt % 4 == 0:
+                        if self.tmrRecv_Cnt - self.tmrRecv_Sav > 3:
+                            self.tmrRecv_Sav = self.tmrRecv_Cnt
                             if len(d[-1]) != len(self.PlotChart.series()):
                                 for series in self.PlotChart.series():
                                     self.PlotChart.removeSeries(series)
