@@ -241,6 +241,8 @@ class SERCOM(QWidget):
             time.sleep(0.01)
 
     def on_tmrRecv_timeout(self):
+        self.tmrRecv_Cnt += 1
+        
         port = self.cmbPort.currentText()
         if not self.closed:
             try:
@@ -369,8 +371,6 @@ class SERCOM(QWidget):
                     for port, desc, hwid in comports():
                         self.cmbPort.addItem(f'{port} ({desc[:desc.index("(")]})')
                     self.cmbPort.addItems(['UDP Client', 'UDP Server'])
-
-        self.tmrRecv_Cnt += 1
 
     @pyqtSlot(int)
     def on_chkWave_stateChanged(self, state):
