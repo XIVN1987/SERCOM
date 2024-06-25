@@ -260,50 +260,48 @@ class SERCOM(QWidget):
                 self.rcvbuff += rcvdbytes
                 
                 if self.chkWave.isChecked():
-                    if self.rcvbuff.rfind(b',') == -1:
-                        return
+                    if b',' in self.rcvbuff:
+                        try:
+                            d = self.rcvbuff[0:self.rcvbuff.rfind(b',')].split(b',')        # [b'12', b'34'] or [b'12 34', b'56 78']
+                            if self.cmbICode.currentText() != 'HEX':
+                                d = [[float(x)   for x in X.strip().split()] for X in d]    # [[12], [34]]   or [[12, 34], [56, 78]]
+                            else:
+                                d = [[int(x, 16) for x in X.strip().split()] for X in d]    # for example, d = [b'12', b'AA', b'5A5A']
+                            for arr in d:
+                                for i, x in enumerate(arr):
+                                    if i == self.N_CURVE: break
 
-                    try:
-                        d = self.rcvbuff[0:self.rcvbuff.rfind(b',')].split(b',')        # [b'12', b'34'] or [b'12 34', b'56 78']
-                        if self.cmbICode.currentText() != 'HEX':
-                            d = [[float(x)   for x in X.strip().split()] for X in d]    # [[12], [34]]   or [[12, 34], [56, 78]]
-                        else:
-                            d = [[int(x, 16) for x in X.strip().split()] for X in d]    # for example, d = [b'12', b'AA', b'5A5A']
-                        for arr in d:
-                            for i, x in enumerate(arr):
-                                if i == self.N_CURVE: break
+                                    self.PlotData[i].pop(0)
+                                    self.PlotData[i].append(x)
+                                    self.PlotPoint[i].pop(0)
+                                    self.PlotPoint[i].append(QtCore.QPointF(999, x))
+                            
+                            self.rcvbuff = self.rcvbuff[self.rcvbuff.rfind(b',')+1:]
 
-                                self.PlotData[i].pop(0)
-                                self.PlotData[i].append(x)
-                                self.PlotPoint[i].pop(0)
-                                self.PlotPoint[i].append(QtCore.QPointF(999, x))
+                            if self.tmrRecv_Cnt - self.tmrRecv_Sav > 3:
+                                self.tmrRecv_Sav = self.tmrRecv_Cnt
+                                if len(d[-1]) != len(self.PlotChart.series()):
+                                    for series in self.PlotChart.series():
+                                        self.PlotChart.removeSeries(series)
+                                    for i in range(min(len(d[-1]), self.N_CURVE)):
+                                        self.PlotCurve[i].setName(f'Curve {i+1}')
+                                        self.PlotChart.addSeries(self.PlotCurve[i])
+                                    self.PlotChart.createDefaultAxes()
+
+                                for i in range(len(self.PlotChart.series())):
+                                    for j, point in enumerate(self.PlotPoint[i]):
+                                        point.setX(j)
+                                
+                                    self.PlotCurve[i].replace(self.PlotPoint[i])
+                                
+                                miny = min([min(d) for d in self.PlotData[:len(self.PlotChart.series())]])
+                                maxy = max([max(d) for d in self.PlotData[:len(self.PlotChart.series())]])
+                                self.PlotChart.axisY().setRange(miny, maxy)
+                                self.PlotChart.axisX().setRange(0000, self.N_POINT)
                         
-                        self.rcvbuff = self.rcvbuff[self.rcvbuff.rfind(b',')+1:]
-
-                        if self.tmrRecv_Cnt - self.tmrRecv_Sav > 3:
-                            self.tmrRecv_Sav = self.tmrRecv_Cnt
-                            if len(d[-1]) != len(self.PlotChart.series()):
-                                for series in self.PlotChart.series():
-                                    self.PlotChart.removeSeries(series)
-                                for i in range(min(len(d[-1]), self.N_CURVE)):
-                                    self.PlotCurve[i].setName(f'Curve {i+1}')
-                                    self.PlotChart.addSeries(self.PlotCurve[i])
-                                self.PlotChart.createDefaultAxes()
-
-                            for i in range(len(self.PlotChart.series())):
-                                for j, point in enumerate(self.PlotPoint[i]):
-                                    point.setX(j)
-                            
-                                self.PlotCurve[i].replace(self.PlotPoint[i])
-                            
-                            miny = min([min(d) for d in self.PlotData[:len(self.PlotChart.series())]])
-                            maxy = max([max(d) for d in self.PlotData[:len(self.PlotChart.series())]])
-                            self.PlotChart.axisY().setRange(miny, maxy)
-                            self.PlotChart.axisX().setRange(0000, self.N_POINT)
-                    
-                    except Exception as e:
-                        self.rcvbuff = b''
-                        print(e)
+                        except Exception as e:
+                            self.rcvbuff = b''
+                            print(e)
 
                 else:
                     text = ''
