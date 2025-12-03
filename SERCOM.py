@@ -11,7 +11,7 @@ import configparser
 
 from PyQt5 import QtCore, QtGui, uic
 from PyQt5.QtCore import pyqtSlot, Qt
-from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog
 from PyQt5.QtChart import QChart, QChartView, QLineSeries
 
 from serial import Serial
@@ -31,6 +31,8 @@ class SERCOM(QWidget):
         super(SERCOM, self).__init__(parent)
         
         uic.loadUi('SERCOM.ui', self)
+
+        self.hWidget4.setVisible(False)
 
         for port, desc, hwid in comports():
             self.cmbPort.addItem(f'{port} ({desc[:desc.index("(")]})')
@@ -87,12 +89,12 @@ class SERCOM(QWidget):
             self.conf.set('display', 'npoint', '1000')
 
             self.conf.add_section('others')
-            self.conf.set('others', 'savedir', '.')
+            self.conf.set('others', 'savfile', os.path.join(os.getcwd(), 'ser_data.txt'))
             self.conf.set('others', 'history', '11 22 33 AA BB CC')
 
         self.txtSend.setPlainText(self.conf.get('others', 'history'))
 
-        self.savedir = self.conf.get('others', 'savedir')
+        self.linFile.setText(self.conf.get('others', 'savfile'))
 
         self.N_CURVE = int(self.conf.get('display', 'ncurve'), 10)
         self.N_POINT = int(self.conf.get('display', 'npoint'), 10)
@@ -142,7 +144,12 @@ class SERCOM(QWidget):
                     self.ser.open()
 
                 if self.chkSave.isChecked():
-                    self.rcvfile = open(os.path.join(self.savedir, datetime.datetime.now().strftime("rcv_%y%m%d%H%M%S.txt")), 'w')
+                    savfile = self.linFile.text()
+                    if self.chkTime.isChecked():
+                        savfile, ext = os.path.splitext(savfile)
+                        savfile = f'{savfile}_{datetime.datetime.now().strftime("%y%m%d%H%M%S")}.{ext}'
+
+                    self.rcvfile = open(savfile, 'a')
             
             except Exception as e:
                 self.txtMain.clear()
@@ -152,6 +159,7 @@ class SERCOM(QWidget):
                 self.closed = False
 
                 self.cmbPort.setEnabled(False)
+                self.chkSave.setEnabled(False)
 
                 if port == 'UDP Server':
                     self.btnOpen.setText('停止监听')
@@ -168,6 +176,7 @@ class SERCOM(QWidget):
             self.closed = True
 
             self.cmbPort.setEnabled(True)
+            self.chkSave.setEnabled(True)
 
             if port == 'UDP Server':
                 self.btnOpen.setText('开启监听')
@@ -375,6 +384,16 @@ class SERCOM(QWidget):
         self.ChartView.setVisible(state == Qt.Checked)
         self.txtMain.setVisible(state == Qt.Unchecked)
     
+    @pyqtSlot(int)
+    def on_chkSave_stateChanged(self, state):
+        self.hWidget4.setVisible(state == Qt.Checked)
+    
+    @pyqtSlot()
+    def on_btnFile_clicked(self):
+        savfile, filter = QFileDialog.getSaveFileName(caption='数据保存文件路径', filter='文本文件 (*.txt)', directory=self.linFile.text())
+        if savfile:
+            self.linFile.setText(savfile)
+    
     @pyqtSlot(str)
     def on_cmbPort_currentIndexChanged(self, text):
         if text in ('UDP Client', 'UDP Server'):
@@ -453,6 +472,7 @@ class SERCOM(QWidget):
         self.conf.set('encode', 'output', self.cmbOCode.currentText())
         self.conf.set('encode', 'oenter', self.cmbEnter.currentText())
         self.conf.set('others', 'history', self.txtSend.toPlainText())
+        self.conf.set('others', 'savfile', self.linFile.text())
 
         self.conf.set('network', 'ip', repr([self.cmbIP.currentText()] + [self.cmbIP.itemText(i) for i in range(self.cmbIP.count())]))
         self.conf.set('network', 'port', self.linPort.text())
