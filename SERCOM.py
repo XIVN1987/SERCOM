@@ -144,12 +144,10 @@ class SERCOM(QWidget):
                     self.ser.open()
 
                 if self.chkSave.isChecked():
-                    savfile = self.linFile.text()
-                    if self.chkTime.isChecked():
-                        savfile, ext = os.path.splitext(savfile)
-                        savfile = f'{savfile}_{datetime.datetime.now().strftime("%y%m%d%H%M%S")}.{ext}'
+                    savfile, ext = os.path.splitext(self.linFile.text())
+                    savfile = f'{savfile}_{datetime.datetime.now().strftime("%y%m%d%H%M%S")}{ext}'
 
-                    self.rcvfile = open(savfile, 'a')
+                    self.rcvfile = open(savfile, 'w')
             
             except Exception as e:
                 self.txtMain.clear()
